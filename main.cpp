@@ -65,3 +65,18 @@ void destory_win(WINDOW *local_win)
 	wrefresh(local_win);
 	delwin(local_win);
 }
+
+class Piece
+{
+private:
+	int shape; 
+	int start_x;
+	int start_y;
+
+public:
+	void init_rotating();
+	void move();
+	void rotate();
+	bool judge();
+	
+};
