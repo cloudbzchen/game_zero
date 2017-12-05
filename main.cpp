@@ -1,7 +1,8 @@
 #include <iostream>
-#include <time.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <stdlib.h>
 #include <ncurses.h>
-#include <map>
 #include <unistd.h>
 
 using namespace std;
@@ -18,27 +19,32 @@ void destory_win(WINDOW *local_win);
 int game_win_height=35;
 int game_win_width=45;
 
-int startx,starty,hint_win_height,hint_win_width;
+int hint_win_height,hint_win_width;
 WINDOW * game_win, *hint_win;
-int ch;
+int key;
 
 class Piece
 {
 public:
-	char shape; 
+	int shape; 
+	int next_shape;
 	int head_x;
 	int head_y;
 
 	int box_shape[4][4];
+	int box_map[34][44];
 
 	
 
 public:
 	void initial();
-	void set_shape(char shape);
+	void set_shape(int shape);
 	void move();
 	void rotate();
-	bool judge();
+	bool judge_right();
+	bool judge_left();
+	bool stop();
+	void set_stop();
 	
 };
 
@@ -49,8 +55,8 @@ int main()
 {
 
 	initscr();
-	raw();
-	//cbreak();
+	//raw();
+	cbreak();
 	noecho();
 	curs_set(0);
 	keypad(stdscr,TRUE);
@@ -73,19 +79,12 @@ int main()
 
 	Piece* pp = new Piece;
 	pp->initial();
-	pp->set_shape('T');
-	for(int i=0; i<4;i++)
-		for(int j=0;j<4;j++)
-		{
-			if(pp->box_shape[i][j]==1)
-				mvwaddch(game_win,i+1,game_win_width/2+j,'#');
-				wrefresh(game_win);
-		}
 
 
-
-	while((ch = getch() )!= KEY_F(1))
+	while(1)
 	{
+		srand((unsigned)time(0));
+		pp->next_shape=rand()%7;
 		pp->move();
 
 	}
@@ -115,9 +114,15 @@ void Piece::initial()
 {
 	this->head_x=game_win_width/2;
 	this->head_y=1;
+	this->box_map[34][44]=0;
+
+	srand((unsigned)time(0));
+	shape=rand()%7;
+	set_shape(shape);
+
 }
 
-void Piece::set_shape(char shape)
+void Piece::set_shape(int shape)
 {
 	int i,j;
 	for(i=0;i<4;i++)
@@ -125,46 +130,46 @@ void Piece::set_shape(char shape)
 			box_shape[i][j]=0;
 	switch(shape)
 	{
-		case 'T':
+		case 0:		// T
 			this->box_shape[0][0]=1;
 			this->box_shape[0][1]=1;
 			this->box_shape[0][2]=1;
 			this->box_shape[1][1]=1;
 			break;
-		case 'S':
+		case 1:		// S
 			this->box_shape[0][1]=1;
 			this->box_shape[0][2]=1;
 			this->box_shape[1][0]=1;
 			this->box_shape[1][1]=1;
 			break;
-		case 'Z':		
+		case 2:		// Z	
 			this->box_shape[0][0]=1;
 			this->box_shape[0][1]=1;
 			this->box_shape[1][1]=1;
 			this->box_shape[1][2]=1;
 			break;
-		case 'J':
+		case 3:		// J
 			this->box_shape[0][1]=1;
 			this->box_shape[1][1]=1;
 			this->box_shape[2][0]=1;
 			this->box_shape[2][1]=1;
 			break;
 
-		case 'L':
+		case 4:		// L
 			this->box_shape[0][0]=1;
 			this->box_shape[1][0]=1;
 			this->box_shape[2][0]=1;
 			this->box_shape[2][1]=1;
 			break;
 
-		case 'I':
+		case 5:		// I
 			this->box_shape[0][0]=1;
 			this->box_shape[1][0]=1;
 			this->box_shape[2][0]=1;
 			this->box_shape[3][0]=1;
 			break;
 
-		case 'O':
+		case 6:	// O
 			this->box_shape[0][0]=1;
 			this->box_shape[0][1]=1;
 			this->box_shape[1][0]=1;
@@ -175,6 +180,15 @@ void Piece::set_shape(char shape)
 }
 void Piece::rotate()
 {
+
+	for(int i=0; i<4;i++)
+		for(int j=0;j<4;j++){
+			if(this->box_shape[i][j]==1){
+				mvwaddch(game_win,head_y+i,head_x+j,' ');
+				wrefresh(game_win);
+			}
+		}
+
 	for(int i=0;i<4;i++)
 		for(int j=0;j<4-i;j++)
 			swap(this->box_shape[i][j],this->box_shape[4-1-j][4-1-i]);
@@ -182,39 +196,161 @@ void Piece::rotate()
 		for(int j=0;j<4;j++)
 			swap(this->box_shape[i][j],this->box_shape[4-1-i][j]);
 
+	/*ru guo kao qian ze ni shi  zhen xuan zhuan*/
+
+	for(int i=0; i<4;i++)
+		for(int j=0;j<4;j++){
+			if(this->box_shape[i][j]==1){
+				mvwaddch(game_win,head_y+i,head_x+j,'#');
+				wrefresh(game_win);
+			}
+		}
+
 }
 
 void Piece::move(){
-	if(ch==KEY_LEFT){
-		for(int i=0; i<4;i++)
+	 fd_set set;
+	 FD_ZERO(&set);
+	 FD_SET(0, &set);
+	      
+	 struct timeval timeout;
+	 timeout.tv_sec = 0;
+	 timeout.tv_usec= 500000;
+	      
+  	if (select(1, &set, NULL, NULL, &timeout) == 0 && !stop()){
+		for(int i=3; i>=0;i--)
 			for(int j=0;j<4;j++){
 				if(this->box_shape[i][j]==1){
 					mvwaddch(game_win,head_y+i,head_x+j,' ');
-					mvwaddch(game_win,head_y+i,head_x+j-1,'#');
+					mvwaddch(game_win,head_y+i+1,head_x+j,'#');
 
 				}
 			}
-			
 		wrefresh(game_win);
-		this->head_x--;
-	}
+		this->head_y++;
+  	}
+	      
+	if (FD_ISSET(0, &set)) {
+	        while ((key = getch()) == -1) ;
 
-	if(ch==KEY_RIGHT){
-		for(int i=0; i<4;i++)
-			for(int j=3;j>=0;j--){
-				if(this->box_shape[i][j]==1){
-					mvwaddch(game_win,head_y+i,head_x+j,' ');
-					mvwaddch(game_win,head_y+i,head_x+j+1,'#');
+		if(key==KEY_LEFT){
+			if(judge_left() && !stop()){
+				for(int i=0; i<4;i++)
+					for(int j=0;j<4;j++){
+						if(this->box_shape[i][j]==1){
+							mvwaddch(game_win,head_y+i,head_x+j,' ');
+							mvwaddch(game_win,head_y+i,head_x+j-1,'#');
 
-				}
+						}
+					}
+
+				wrefresh(game_win);
+				this->head_x--;
 			}
+		}
 
-		wrefresh(game_win);
-		this->head_x++;
+		if(key==KEY_RIGHT){
+			if(judge_right() && !stop()){
+				for(int i=0; i<4;i++)
+					for(int j=3;j>=0;j--){
+						if(this->box_shape[i][j]==1){
+							mvwaddch(game_win,head_y+i,head_x+j,' ');
+							mvwaddch(game_win,head_y+i,head_x+j+1,'#');
+
+						}
+					}
+
+				wrefresh(game_win);
+				this->head_x++;
+			}
+		}
+
+		if(key==KEY_DOWN){
+			if(!stop()){
+				usleep(100);
+				for(int i=3; i>=0;i--)
+					for(int j=0;j<4;j++){
+						if(this->box_shape[i][j]==1){
+							mvwaddch(game_win,head_y+i,head_x+j,' ');
+							mvwaddch(game_win,head_y+i+1,head_x+j,'#');
+
+						}
+					}
+				wrefresh(game_win);
+				this->head_y++;
+			}
+		}
+
+		if(key==KEY_UP)
+		{
+			// for(int i=0;i<4;i++)
+			// 	for(int j=0;j<4-i;j++)
+			// 		swap(this->box_shape[i][j],this->box_shape[4-1-j][4-1-i]);
+			// for(int i=0;i<4/2;i++)
+			// 	for(int j=0;j<4;j++)
+			// 		swap(this->box_shape[i][j],this->box_shape[4-1-i][j]);
+			rotate();
+		}
 	}
-
 }
 
+	/* detect the wall */
 
+bool Piece::judge_right(){
+	//the right wall
+	for(int j=3;j>=0;j--)
+		for(int i=0;i<4;i++)
+			if(this->box_shape[i][j]==1)
+				if((head_x+j+2)==game_win_width || box_map[head_y+i][head_x+j+1]==1)
+					return false;
+				else
+					return true;
+}
 
+bool Piece::judge_left(){
+	//the left wall
+	for(int j=0;j<4;j++)
+		for(int i=0;i<4;i++)
+			if(this->box_shape[i][j]==1)
+				if((head_x+j-1)==0 || box_map[head_y+i][head_x+j-1]==1)
+					return false;
+				else
+					return true;
+}
 
+bool Piece::stop(){
+
+	//detect the bottom box
+	for(int i=3; i>=0;i--)
+		for(int j=0;j<4;j++){
+			if(this->box_shape[i][j]==1)
+				if((head_y+i+2)==game_win_height){
+					set_stop();
+					return true;
+				}
+		}
+	for(int i=3; i>=0;i--)
+		for(int j=0;j<4;j++){
+			if(this->box_shape[i][j]==1)
+				if(box_map[head_y+i+1][head_x+j]==1){
+					set_stop();
+					return true;
+				}
+		}
+
+	return false;
+}
+
+void Piece::set_stop(){
+
+	for(int i=0; i<4;i++)
+		for(int j=0;j<4;j++){
+			if(this->box_shape[i][j]==1)
+				this->box_map[head_y+i][head_x+j]=1;
+		}
+	head_x=game_win_width/2;
+	head_y=1;
+	shape=next_shape;
+	set_shape(shape);
+
+}
