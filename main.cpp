@@ -20,7 +20,7 @@ int getrand(int min, int max)
 WINDOW *create_newwin(int height,int width,int starty,int startx);
 void destory_win(WINDOW *local_win);
 
-int game_win_height=35;	
+int game_win_height=30;	
 int game_win_width=45;
 
 int hint_win_height,hint_win_width;
