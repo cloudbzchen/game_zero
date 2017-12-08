@@ -47,7 +47,7 @@ public:
 	int box_shape[4][4];
 	int next_box_shape[4][4];
 
-	int box_map[35][45];
+	int box_map[30][45];
 
 	bool game_over;
 
