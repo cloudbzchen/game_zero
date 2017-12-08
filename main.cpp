@@ -52,7 +52,7 @@ public:
 
 public:
 	void initial();
-	int set_shape(int &cshape, int box_shape[][4],int &size_w, int & size_h);
+	void set_shape(int &cshape, int box_shape[][4],int &size_w, int & size_h);
 
 	void score_next();
 	void judge();
@@ -172,7 +172,7 @@ void Piece::initial()
 	wrefresh(score_win);
 }
 
-int Piece::set_shape(int &cshape, int shape[][4],int &size_w,int &size_h)
+void Piece::set_shape(int &cshape, int shape[][4],int &size_w,int &size_h)
 {
 	int i,j;
 	for(i=0;i<4;i++)
