@@ -23,7 +23,8 @@ void destory_win(WINDOW *local_win);
 int game_win_height=30;	
 int game_win_width=45;
 
-int hint_win_height,hint_win_width;
+int hint_win_height=10;
+int hint_win_width=20;
 WINDOW * game_win, *hint_win ,*score_win;
 int key;
 
@@ -75,12 +76,7 @@ int main()
 	keypad(stdscr,TRUE);
 
 	refresh();
-
 	
-	hint_win_height=10;
-	hint_win_width=20;
-
-
 	game_win = create_newwin(game_win_height, game_win_width, 0,0);
 	wborder(game_win, '*', '*', '*', '*', '*', '*', '*', '*');
 	wrefresh(game_win);
@@ -246,7 +242,6 @@ void Piece::set_shape(int &cshape, int shape[][4],int &size_w,int &size_h)
 
 	if(isaggin())    /* GAME OVER ! */
 		game_over=true;
-
 
 }
 
